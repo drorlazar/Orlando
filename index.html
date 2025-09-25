@@ -939,7 +939,7 @@
 
         // Check user permissions
         function checkUserPermissions(user) {
-            if (!user) {
+            if (!user || !user.email) {
                 isEditor = false;
                 updateUIForPermissions();
                 return;
