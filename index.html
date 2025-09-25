@@ -920,10 +920,15 @@
             const provider = new firebase.auth.GoogleAuthProvider();
             auth.signInWithPopup(provider).then((result) => {
                 console.log('Signed in:', result.user.email);
-                checkUserPermissions(result.user);
+                // Don't call checkUserPermissions here - onAuthStateChanged will handle it
             }).catch((error) => {
                 console.error('Sign-in error:', error);
-                showSyncStatus('error', 'שגיאה בהתחברות');
+                if (error.code === 'auth/unauthorized-domain') {
+                    showSyncStatus('error', 'דומיין לא מורשה - נא להוסיף ב-Firebase Console או להשתמש ב-localhost');
+                    alert('כדי להשתמש בהתחברות, יש להוסיף את הדומיין הנוכחי ברשימת הדומיינים המורשים ב-Firebase Console.\n\nלחלופין, הפעל שרת מקומי:\npython -m http.server 8000\n\nואז גש ל: http://localhost:8000');
+                } else {
+                    showSyncStatus('error', 'שגיאה בהתחברות');
+                }
             });
         }
 
@@ -946,17 +951,56 @@
             }
 
             const emailKey = user.email.replace('@', '_').replace(/\./g, '-');
-            
+            console.log('Checking permissions for:', user.email, 'with key:', emailKey);
+
             // Check if user is in editors list
             database.ref(`editors/${emailKey}`).once('value').then((snapshot) => {
+                console.log('Editor status from database:', snapshot.val());
                 isEditor = snapshot.val() === true;
+                console.log('isEditor set to:', isEditor);
                 updateUIForPermissions();
-                
+                updateAuthUI(user); // Update auth UI AFTER we know the editor status
+
                 if (isEditor) {
                     showSyncStatus('success', 'התחברת כעורך');
                 } else {
                     showSyncStatus('success', 'התחברת כצופה');
+
+                    // Add instruction for becoming an editor
+                    console.log('To become an editor, run in console: makeEditor("' + user.email + '")');
                 }
+            }).catch((error) => {
+                console.error('Error checking permissions:', error);
+            });
+        }
+
+        // Function to make a user an editor (run in console)
+        function makeEditor(email) {
+            if (!email) {
+                console.error('Please provide an email address');
+                return;
+            }
+
+            const emailKey = email.replace('@', '_').replace(/\./g, '-');
+            console.log('Attempting to add editor with key:', emailKey);
+
+            database.ref(`editors/${emailKey}`).set(true).then(() => {
+                console.log('Successfully added', email, 'as editor');
+                alert('המשתמש ' + email + ' הוגדר כעורך! יש לרענן את הדף.');
+
+                // Verify it was written
+                database.ref(`editors/${emailKey}`).once('value').then((snapshot) => {
+                    console.log('Verification - Editor status in database:', snapshot.val());
+                    if (snapshot.val() === true) {
+                        console.log('Editor permission confirmed in database');
+                        location.reload();
+                    } else {
+                        console.error('Editor permission was not saved properly');
+                    }
+                });
+            }).catch((error) => {
+                console.error('Error adding editor:', error);
+                alert('שגיאה בהוספת עורך: ' + error.message);
             });
         }
 
@@ -965,29 +1009,36 @@
             const viewOnlyBanner = document.getElementById('viewOnlyBanner');
             const addItemSection = document.getElementById('addItemSection');
             const resetBtn = document.getElementById('resetBtn');
-            
+
+            console.log('Updating UI for permissions. isEditor:', isEditor, 'currentUser:', currentUser?.email);
+
             if (isEditor) {
-                viewOnlyBanner.classList.add('hidden');
-                addItemSection.classList.remove('disabled');
-                resetBtn.disabled = false;
-                
+                viewOnlyBanner?.classList.add('hidden');
+                addItemSection?.classList.remove('disabled');
+                if (resetBtn) resetBtn.disabled = false;
+
                 // Enable all checkboxes and actions
                 document.querySelectorAll('.checklist-item').forEach(item => {
                     item.classList.remove('view-only');
                 });
             } else {
                 if (currentUser) {
-                    viewOnlyBanner.classList.remove('hidden');
+                    viewOnlyBanner?.classList.remove('hidden');
                 } else {
-                    viewOnlyBanner.classList.add('hidden');
+                    viewOnlyBanner?.classList.add('hidden');
                 }
-                addItemSection.classList.add('disabled');
-                resetBtn.disabled = true;
-                
+                addItemSection?.classList.add('disabled');
+                if (resetBtn) resetBtn.disabled = true;
+
                 // Disable all checkboxes and actions
                 document.querySelectorAll('.checklist-item').forEach(item => {
                     item.classList.add('view-only');
                 });
+            }
+
+            // Force re-render of all items to show/hide edit buttons
+            if (isEditor && typeof renderAllItems !== 'undefined') {
+                renderAllItems();
             }
         }
 
@@ -1040,20 +1091,30 @@
 
         // Initialize app with Firebase
         async function initializeApp() {
+            // Check for admin setup mode
+            const urlParams = new URLSearchParams(window.location.search);
+            const setupMode = urlParams.get('setup');
+
             // Listen to authentication state
             auth.onAuthStateChanged((user) => {
                 currentUser = user;
-                updateAuthUI(user);
-                
+
                 if (user) {
                     console.log('User signed in:', user.email);
-                    checkUserPermissions(user);
+
+                    // Auto-grant editor permissions if in setup mode
+                    if (setupMode === 'editor' && user.email) {
+                        makeEditor(user.email);
+                    } else {
+                        checkUserPermissions(user); // This will call updateAuthUI after checking permissions
+                    }
                 } else {
                     console.log('No user signed in - anonymous mode');
                     isEditor = false;
+                    updateAuthUI(null); // Only update auth UI for non-authenticated state
                     updateUIForPermissions();
                 }
-                
+
                 if (!isInitialized) {
                     setupDatabaseListeners();
                 }
