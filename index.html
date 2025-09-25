@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>רשימת אריזה לטיול אורלנדו</title>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
+    
     <style>
         * {
             box-sizing: border-box;
@@ -55,6 +61,72 @@
             direction: rtl;
             color: var(--text-color);
             transition: all 0.3s ease;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+            color: white;
+            font-size: 1.5em;
+        }
+        
+        .loading-overlay.hidden {
+            display: none;
+        }
+        
+        .sync-indicator {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            background: #4caf50;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-size: 0.9em;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+            transition: all 0.3s ease;
+            z-index: 100;
+        }
+        
+        .sync-indicator.syncing {
+            background: #ff9800;
+        }
+        
+        .sync-indicator.error {
+            background: #f44336;
+        }
+        
+        .sync-indicator.hidden {
+            transform: translateY(100px);
+            opacity: 0;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .sync-icon {
+            display: inline-block;
+            animation: spin 1s linear infinite;
+        }
+        
+        .sync-indicator.syncing .sync-icon {
+            animation: spin 1s linear infinite;
+        }
+        
+        .sync-indicator:not(.syncing) .sync-icon {
+            animation: none;
         }
         
         .container {
@@ -474,10 +546,26 @@
                 width: 100%;
                 min-width: auto;
             }
+            
+            .sync-indicator {
+                bottom: 10px;
+                left: 10px;
+                font-size: 0.8em;
+                padding: 8px 15px;
+            }
         }
     </style>
 </head>
 <body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div>⏳ טוען נתונים מהענן...</div>
+    </div>
+    
+    <div class="sync-indicator hidden" id="syncIndicator">
+        <span class="sync-icon">🔄</span>
+        <span id="syncText">מסונכרן</span>
+    </div>
+    
     <div class="container">
         <div class="header">
             <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle">🌙</button>
@@ -589,12 +677,28 @@
         </div>
         
         <div class="footer">
-            💾 כל הנתונים נשמרים אוטומטית במכשיר שלך
+            ☁️ כל הנתונים נשמרים בענן ומסתנכרנים בין כל המכשירים
         </div>
     </div>
 
     <script>
-        // Data structure for the packing list
+        // YOUR Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyCVi8WSsnGHuBtpszcyAayUlCKve37x-nM",
+            authDomain: "orlandopacking-b74ec.firebaseapp.com",
+            databaseURL: "https://orlandopacking-b74ec-default-rtdb.firebaseio.com",
+            projectId: "orlandopacking-b74ec",
+            storageBucket: "orlandopacking-b74ec.firebasestorage.app",
+            messagingSenderId: "478421714168",
+            appId: "1:478421714168:web:debfb7279164c6eb39a70d"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+        const auth = firebase.auth();
+
+        // Default items
         const defaultItems = {
             medical: [
                 'תרופות קבועות לכל בני המשפחה (כמות ל-3 שבועות + רזרבה)',
@@ -659,107 +763,152 @@
             ]
         };
 
-        // Storage management
-        class StorageManager {
-            static getItems() {
-                const stored = localStorage.getItem('packingListItems');
-                return stored ? JSON.parse(stored) : defaultItems;
-            }
+        let items = {};
+        let checkedItems = {};
+        let isInitialized = false;
 
-            static saveItems(items) {
-                localStorage.setItem('packingListItems', JSON.stringify(items));
+        // Show sync status
+        function showSyncStatus(status, message) {
+            const indicator = document.getElementById('syncIndicator');
+            const text = document.getElementById('syncText');
+            
+            indicator.classList.remove('hidden', 'syncing', 'error');
+            
+            if (status === 'syncing') {
+                indicator.classList.add('syncing');
+                text.textContent = message || 'מסנכרן...';
+            } else if (status === 'error') {
+                indicator.classList.add('error');
+                text.textContent = message || 'שגיאה בסנכרון';
+            } else {
+                text.textContent = message || 'מסונכרן';
             }
+            
+            setTimeout(() => {
+                if (!indicator.classList.contains('syncing')) {
+                    indicator.classList.add('hidden');
+                }
+            }, 3000);
+        }
 
-            static getCheckedItems() {
-                const stored = localStorage.getItem('checkedItems');
-                return stored ? JSON.parse(stored) : {};
-            }
-
-            static saveCheckedItems(checkedItems) {
-                localStorage.setItem('checkedItems', JSON.stringify(checkedItems));
-            }
-
-            static getTheme() {
-                return localStorage.getItem('theme') || 'light';
-            }
-
-            static saveTheme(theme) {
-                localStorage.setItem('theme', theme);
-            }
-
-            static getCollapsedCategories() {
-                const stored = localStorage.getItem('collapsedCategories');
-                return stored ? JSON.parse(stored) : [];
-            }
-
-            static saveCollapsedCategories(collapsed) {
-                localStorage.setItem('collapsedCategories', JSON.stringify(collapsed));
-            }
-
-            static resetAll() {
-                localStorage.removeItem('packingListItems');
-                localStorage.removeItem('checkedItems');
-                localStorage.removeItem('collapsedCategories');
-                // Note: keeping theme preference
+        // Initialize app with Firebase
+        async function initializeApp() {
+            try {
+                // Sign in anonymously
+                await auth.signInAnonymously();
+                
+                // Listen to authentication state
+                auth.onAuthStateChanged((user) => {
+                    if (user) {
+                        console.log('Connected to cloud storage');
+                        setupDatabaseListeners();
+                    }
+                });
+            } catch (error) {
+                console.error('Firebase initialization error:', error);
+                showSyncStatus('error', 'בעיה בחיבור לענן');
+                // Fall back to local storage if needed
+                initializeLocalMode();
             }
         }
 
-        // Initialize the app
-        let items = StorageManager.getItems();
-        let checkedItems = StorageManager.getCheckedItems();
-        let itemIdCounter = 0;
+        // Setup database listeners
+        function setupDatabaseListeners() {
+            // Listen for items changes
+            database.ref('items').on('value', (snapshot) => {
+                const data = snapshot.val();
+                items = data || defaultItems;
+                
+                if (!isInitialized) {
+                    // First time - check if we need to initialize with defaults
+                    if (!data) {
+                        database.ref('items').set(defaultItems);
+                    }
+                }
+                
+                renderAllItems();
+                updateStats();
+                if (isInitialized) {
+                    showSyncStatus('success', 'עודכן מהענן');
+                }
+            });
 
-        function initializeApp() {
-            // Apply saved theme
-            const savedTheme = StorageManager.getTheme();
-            if (savedTheme === 'dark') {
-                document.body.classList.add('dark-mode');
-                document.getElementById('themeToggle').textContent = '☀️';
-            }
+            // Listen for checked items changes
+            database.ref('checkedItems').on('value', (snapshot) => {
+                checkedItems = snapshot.val() || {};
+                if (isInitialized) {
+                    updateCheckboxes();
+                    updateStats();
+                }
+            });
 
-            // Render all items
+            // Listen for theme preference
+            database.ref('preferences/theme').on('value', (snapshot) => {
+                const theme = snapshot.val() || 'light';
+                if (theme === 'dark') {
+                    document.body.classList.add('dark-mode');
+                    document.getElementById('themeToggle').textContent = '☀️';
+                } else {
+                    document.body.classList.remove('dark-mode');
+                    document.getElementById('themeToggle').textContent = '🌙';
+                }
+            });
+
+            // Listen for collapsed categories
+            database.ref('preferences/collapsed').on('value', (snapshot) => {
+                const collapsed = snapshot.val() || [];
+                collapsed.forEach(categoryName => {
+                    const category = document.querySelector(`[data-category="${categoryName}"]`);
+                    if (category) {
+                        category.classList.add('collapsed');
+                    }
+                });
+            });
+
+            // Mark as initialized and hide loading
+            setTimeout(() => {
+                isInitialized = true;
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                showSyncStatus('success', 'מחובר לענן');
+            }, 1000);
+        }
+
+        // Fallback to local mode if Firebase fails
+        function initializeLocalMode() {
+            console.log('Running in local mode');
+            items = defaultItems;
             renderAllItems();
-
-            // Apply saved collapsed states
-            const collapsedCategories = StorageManager.getCollapsedCategories();
-            collapsedCategories.forEach(categoryName => {
-                const category = document.querySelector(`[data-category="${categoryName}"]`);
-                if (category) {
-                    category.classList.add('collapsed');
-                }
-            });
-
-            // Add event listener for Enter key in input field
-            document.getElementById('newItemText').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
-                    addNewItem();
-                }
-            });
-
-            // Update stats
             updateStats();
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            showSyncStatus('error', 'מצב לא מקוון');
+            isInitialized = true;
         }
 
+        // Render all items
         function renderAllItems() {
             Object.keys(items).forEach(category => {
                 renderCategoryItems(category);
             });
         }
 
+        // Render category items
         function renderCategoryItems(category) {
             const container = document.getElementById(`${category}-content`);
             if (!container) return;
 
             container.innerHTML = '';
             
-            items[category].forEach((itemText, index) => {
-                const itemId = `${category}-${index}`;
-                const isChecked = checkedItems[itemId] || false;
-                const itemElement = createItemElement(itemText, itemId, isChecked, category, index);
-                container.appendChild(itemElement);
-            });
+            if (items[category]) {
+                items[category].forEach((itemText, index) => {
+                    const itemId = `${category}-${index}`;
+                    const isChecked = checkedItems[itemId] || false;
+                    const itemElement = createItemElement(itemText, itemId, isChecked, category, index);
+                    container.appendChild(itemElement);
+                });
+            }
         }
 
+        // Create item element
         function createItemElement(text, itemId, isChecked, category, index) {
             const div = document.createElement('div');
             div.className = 'checklist-item';
@@ -802,19 +951,48 @@
             return div;
         }
 
+        // Handle checkbox change
         function handleCheckChange(checkbox, itemId) {
+            showSyncStatus('syncing', 'שומר...');
+            
             const item = checkbox.closest('.checklist-item');
+            const updates = {};
+            
             if (checkbox.checked) {
                 item.classList.add('completed');
-                checkedItems[itemId] = true;
+                updates[`checkedItems/${itemId}`] = true;
             } else {
                 item.classList.remove('completed');
-                delete checkedItems[itemId];
+                updates[`checkedItems/${itemId}`] = null;
             }
-            StorageManager.saveCheckedItems(checkedItems);
+            
+            database.ref().update(updates).then(() => {
+                showSyncStatus('success', 'נשמר');
+            }).catch((error) => {
+                showSyncStatus('error', 'שגיאה בשמירה');
+                console.error('Save error:', error);
+            });
+            
             updateStats();
         }
 
+        // Update checkboxes after data sync
+        function updateCheckboxes() {
+            document.querySelectorAll('.checklist-item input[type="checkbox"]').forEach(checkbox => {
+                const itemId = checkbox.id;
+                const isChecked = checkedItems[itemId] || false;
+                checkbox.checked = isChecked;
+                
+                const item = checkbox.closest('.checklist-item');
+                if (isChecked) {
+                    item.classList.add('completed');
+                } else {
+                    item.classList.remove('completed');
+                }
+            });
+        }
+
+        // Edit item
         function editItem(category, index, itemElement) {
             const label = itemElement.querySelector('label');
             const currentText = label.innerHTML;
@@ -849,10 +1027,12 @@
             const saveEdit = () => {
                 const newText = input.value.trim();
                 if (newText) {
-                    items[category][index] = newText;
-                    StorageManager.saveItems(items);
-                    renderCategoryItems(category);
-                    updateStats();
+                    showSyncStatus('syncing', 'שומר...');
+                    database.ref(`items/${category}/${index}`).set(newText).then(() => {
+                        showSyncStatus('success', 'נשמר');
+                    }).catch((error) => {
+                        showSyncStatus('error', 'שגיאה בשמירה');
+                    });
                 }
             };
 
@@ -873,35 +1053,43 @@
             });
         }
 
+        // Delete item
         function deleteItem(category, index) {
             if (confirm('האם אתה בטוח שברצונך למחוק פריט זה?')) {
-                // Remove from items array
-                items[category].splice(index, 1);
+                showSyncStatus('syncing', 'מוחק...');
                 
-                // Update checked items (reindex)
-                const newCheckedItems = {};
-                Object.keys(checkedItems).forEach(key => {
-                    const [cat, idx] = key.split('-');
-                    if (cat === category) {
-                        const numIdx = parseInt(idx);
-                        if (numIdx < index) {
-                            newCheckedItems[key] = checkedItems[key];
-                        } else if (numIdx > index) {
-                            newCheckedItems[`${cat}-${numIdx - 1}`] = checkedItems[key];
+                // Get current items for category
+                const categoryItems = [...(items[category] || [])];
+                categoryItems.splice(index, 1);
+                
+                // Update items
+                database.ref(`items/${category}`).set(categoryItems).then(() => {
+                    // Update checked items (reindex)
+                    const updates = {};
+                    Object.keys(checkedItems).forEach(key => {
+                        const [cat, idx] = key.split('-');
+                        if (cat === category) {
+                            const numIdx = parseInt(idx);
+                            if (numIdx === index) {
+                                updates[`checkedItems/${key}`] = null;
+                            } else if (numIdx > index) {
+                                updates[`checkedItems/${key}`] = null;
+                                updates[`checkedItems/${cat}-${numIdx - 1}`] = checkedItems[key];
+                            }
                         }
-                    } else {
-                        newCheckedItems[key] = checkedItems[key];
-                    }
+                    });
+                    
+                    return database.ref().update(updates);
+                }).then(() => {
+                    showSyncStatus('success', 'נמחק');
+                }).catch((error) => {
+                    showSyncStatus('error', 'שגיאה במחיקה');
+                    console.error('Delete error:', error);
                 });
-                
-                checkedItems = newCheckedItems;
-                StorageManager.saveItems(items);
-                StorageManager.saveCheckedItems(checkedItems);
-                renderCategoryItems(category);
-                updateStats();
             }
         }
 
+        // Add new item
         function addNewItem() {
             const categorySelect = document.getElementById('categorySelect');
             const itemText = document.getElementById('newItemText');
@@ -914,37 +1102,40 @@
             const category = categorySelect.value;
             const text = itemText.value.trim();
             
-            // Add to items array
-            if (!items[category]) {
-                items[category] = [];
-            }
-            items[category].push(text);
+            showSyncStatus('syncing', 'מוסיף...');
             
-            // Save and render
-            StorageManager.saveItems(items);
-            renderCategoryItems(category);
+            // Get current items for category
+            const categoryItems = items[category] || [];
+            categoryItems.push(text);
             
-            // Clear form
-            categorySelect.value = '';
-            itemText.value = '';
-            
-            // Update stats
-            updateStats();
-            
-            // Expand category if collapsed
-            const categoryElement = document.querySelector(`[data-category="${category}"]`);
-            if (categoryElement && categoryElement.classList.contains('collapsed')) {
-                categoryElement.classList.remove('collapsed');
-                saveCollapsedState();
-            }
+            // Save to database
+            database.ref(`items/${category}`).set(categoryItems).then(() => {
+                // Clear form
+                categorySelect.value = '';
+                itemText.value = '';
+                
+                // Expand category if collapsed
+                const categoryElement = document.querySelector(`[data-category="${category}"]`);
+                if (categoryElement && categoryElement.classList.contains('collapsed')) {
+                    categoryElement.classList.remove('collapsed');
+                    saveCollapsedState();
+                }
+                
+                showSyncStatus('success', 'נוסף');
+            }).catch((error) => {
+                showSyncStatus('error', 'שגיאה בהוספה');
+                console.error('Add error:', error);
+            });
         }
 
+        // Toggle category collapse
         function toggleCategory(header) {
             const category = header.closest('.category');
             category.classList.toggle('collapsed');
             saveCollapsedState();
         }
 
+        // Save collapsed state
         function saveCollapsedState() {
             const collapsed = [];
             document.querySelectorAll('.category.collapsed').forEach(cat => {
@@ -953,9 +1144,10 @@
                     collapsed.push(categoryName);
                 }
             });
-            StorageManager.saveCollapsedCategories(collapsed);
+            database.ref('preferences/collapsed').set(collapsed);
         }
 
+        // Toggle theme
         function toggleTheme() {
             const body = document.body;
             const themeToggle = document.getElementById('themeToggle');
@@ -963,22 +1155,36 @@
             if (body.classList.contains('dark-mode')) {
                 body.classList.remove('dark-mode');
                 themeToggle.textContent = '🌙';
-                StorageManager.saveTheme('light');
+                database.ref('preferences/theme').set('light');
             } else {
                 body.classList.add('dark-mode');
                 themeToggle.textContent = '☀️';
-                StorageManager.saveTheme('dark');
+                database.ref('preferences/theme').set('dark');
             }
         }
 
+        // Reset all data
         function resetAll() {
             if (confirm('האם אתה בטוח שברצונך לאפס את כל הרשימה? פעולה זו תמחק את כל הסימונים והפריטים המותאמים אישית.')) {
-                StorageManager.resetAll();
-                // Reload the page to reset everything
-                location.reload();
+                showSyncStatus('syncing', 'מאפס...');
+                
+                const updates = {
+                    'items': defaultItems,
+                    'checkedItems': null,
+                    'preferences/collapsed': null
+                };
+                
+                database.ref().update(updates).then(() => {
+                    showSyncStatus('success', 'אופס בהצלחה');
+                    location.reload();
+                }).catch((error) => {
+                    showSyncStatus('error', 'שגיאה באיפוס');
+                    console.error('Reset error:', error);
+                });
             }
         }
 
+        // Update statistics
         function updateStats() {
             const allCheckboxes = document.querySelectorAll('.checklist-item input[type="checkbox"]');
             const checkedCheckboxes = document.querySelectorAll('.checklist-item input[type="checkbox"]:checked');
@@ -997,8 +1203,17 @@
             document.getElementById('progressBar').style.width = percentage + '%';
         }
 
-        // Initialize app when DOM is loaded
-        document.addEventListener('DOMContentLoaded', initializeApp);
+        // Add enter key listener for new item input
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('newItemText').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addNewItem();
+                }
+            });
+            
+            // Initialize the app
+            initializeApp();
+        });
     </script>
 </body>
 </html>
