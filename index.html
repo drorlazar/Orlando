@@ -63,6 +63,105 @@
             transition: all 0.3s ease;
         }
         
+        .auth-section {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 1000;
+            background: white;
+            padding: 10px 15px;
+            border-radius: 30px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            max-width: 300px;
+        }
+        
+        body.dark-mode .auth-section {
+            background: var(--container-bg);
+        }
+        
+        .auth-section img {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+        }
+        
+        .auth-info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .auth-name {
+            font-weight: bold;
+            font-size: 0.9em;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .auth-status {
+            font-size: 0.8em;
+            color: #666;
+        }
+        
+        body.dark-mode .auth-status {
+            color: #aaa;
+        }
+        
+        .auth-status.editor {
+            color: #4caf50;
+        }
+        
+        .auth-status.viewer {
+            color: #ff9800;
+        }
+        
+        .sign-in-btn, .sign-out-btn {
+            background: #4285f4;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+            white-space: nowrap;
+        }
+        
+        .sign-in-btn:hover, .sign-out-btn:hover {
+            background: #357ae8;
+            transform: scale(1.05);
+        }
+        
+        .sign-out-btn {
+            background: #db4437;
+            padding: 6px 12px;
+            font-size: 0.8em;
+        }
+        
+        .sign-out-btn:hover {
+            background: #c23321;
+        }
+        
+        .view-only-banner {
+            background: #fff3cd;
+            border: 1px solid #ffc107;
+            color: #856404;
+            padding: 10px;
+            text-align: center;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            font-size: 0.9em;
+        }
+        
+        body.dark-mode .view-only-banner {
+            background: #3d3d00;
+            border-color: #ffc107;
+            color: #ffc107;
+        }
+        
         .loading-overlay {
             position: fixed;
             top: 0;
@@ -137,6 +236,7 @@
             box-shadow: 0 20px 40px var(--shadow-color);
             overflow: hidden;
             transition: all 0.3s ease;
+            margin-top: 80px;
         }
         
         .header {
@@ -182,6 +282,11 @@
         .reset-btn:hover {
             background: rgba(255,100,100,0.5);
             transform: scale(1.05);
+        }
+        
+        .reset-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
         
         .header h1 {
@@ -289,6 +394,11 @@
             padding: 12px 10px;
         }
         
+        .checklist-item.view-only input[type="checkbox"] {
+            pointer-events: none;
+            opacity: 0.7;
+        }
+        
         .checklist-item input[type="checkbox"] {
             width: 20px;
             height: 20px;
@@ -304,6 +414,10 @@
             line-height: 1.4;
         }
         
+        .checklist-item.view-only label {
+            cursor: default;
+        }
+        
         .item-actions {
             display: flex;
             gap: 8px;
@@ -313,6 +427,10 @@
         
         .checklist-item:hover .item-actions {
             opacity: 1;
+        }
+        
+        .checklist-item.view-only .item-actions {
+            display: none;
         }
         
         .edit-btn, .delete-btn, .save-btn, .cancel-btn {
@@ -429,6 +547,11 @@
             border: 2px solid var(--add-section-border);
         }
         
+        .add-item-section.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+        
         .add-item-section h3 {
             color: #2e7d32;
             margin-bottom: 15px;
@@ -506,6 +629,16 @@
                 padding: 10px;
             }
             
+            .auth-section {
+                top: 10px;
+                right: 10px;
+                max-width: 200px;
+            }
+            
+            .container {
+                margin-top: 120px;
+            }
+            
             .header {
                 padding: 20px;
             }
@@ -557,6 +690,12 @@
     </style>
 </head>
 <body>
+    <div class="auth-section" id="authSection">
+        <div id="authContent">
+            <button class="sign-in-btn" onclick="signInWithGoogle()">כניסה עם Google</button>
+        </div>
+    </div>
+    
     <div class="loading-overlay" id="loadingOverlay">
         <div>⏳ טוען נתונים מהענן...</div>
     </div>
@@ -569,7 +708,7 @@
     <div class="container">
         <div class="header">
             <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle">🌙</button>
-            <button class="reset-btn" onclick="resetAll()">🔄 אפס הכל</button>
+            <button class="reset-btn" onclick="resetAll()" id="resetBtn">🔄 אפס הכל</button>
             <h1>🏰 רשימת אריזה לטיול אורלנדו</h1>
             <p>משפחה של 5 • שבועיים • פארקי דיסני ויוניברסל</p>
             <div class="progress">
@@ -578,6 +717,10 @@
         </div>
         
         <div class="content">
+            <div class="view-only-banner hidden" id="viewOnlyBanner">
+                👁️ מצב צפייה בלבד - התחבר עם חשבון Google מורשה כדי לערוך
+            </div>
+            
             <div class="stats">
                 <div class="stats-grid">
                     <div class="stat-item">
@@ -657,7 +800,7 @@
             </div>
 
             <!-- Add New Item Section -->
-            <div class="add-item-section">
+            <div class="add-item-section" id="addItemSection">
                 <h3>➕ הוסף פריט חדש</h3>
                 <div class="add-item-form">
                     <select id="categorySelect">
@@ -697,6 +840,10 @@
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
         const auth = firebase.auth();
+
+        // User state
+        let currentUser = null;
+        let isEditor = false;
 
         // Default items
         const defaultItems = {
@@ -766,6 +913,106 @@
         let items = {};
         let checkedItems = {};
         let isInitialized = false;
+        let editors = {};
+
+        // Google Sign-In
+        function signInWithGoogle() {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider).then((result) => {
+                console.log('Signed in:', result.user.email);
+                checkUserPermissions(result.user);
+            }).catch((error) => {
+                console.error('Sign-in error:', error);
+                showSyncStatus('error', 'שגיאה בהתחברות');
+            });
+        }
+
+        // Sign out
+        function signOut() {
+            auth.signOut().then(() => {
+                console.log('Signed out');
+                location.reload();
+            }).catch((error) => {
+                console.error('Sign-out error:', error);
+            });
+        }
+
+        // Check user permissions
+        function checkUserPermissions(user) {
+            if (!user) {
+                isEditor = false;
+                updateUIForPermissions();
+                return;
+            }
+
+            const emailKey = user.email.replace('@', '_').replace(/\./g, '-');
+            
+            // Check if user is in editors list
+            database.ref(`editors/${emailKey}`).once('value').then((snapshot) => {
+                isEditor = snapshot.val() === true;
+                updateUIForPermissions();
+                
+                if (isEditor) {
+                    showSyncStatus('success', 'התחברת כעורך');
+                } else {
+                    showSyncStatus('success', 'התחברת כצופה');
+                }
+            });
+        }
+
+        // Update UI based on permissions
+        function updateUIForPermissions() {
+            const viewOnlyBanner = document.getElementById('viewOnlyBanner');
+            const addItemSection = document.getElementById('addItemSection');
+            const resetBtn = document.getElementById('resetBtn');
+            
+            if (isEditor) {
+                viewOnlyBanner.classList.add('hidden');
+                addItemSection.classList.remove('disabled');
+                resetBtn.disabled = false;
+                
+                // Enable all checkboxes and actions
+                document.querySelectorAll('.checklist-item').forEach(item => {
+                    item.classList.remove('view-only');
+                });
+            } else {
+                if (currentUser) {
+                    viewOnlyBanner.classList.remove('hidden');
+                } else {
+                    viewOnlyBanner.classList.add('hidden');
+                }
+                addItemSection.classList.add('disabled');
+                resetBtn.disabled = true;
+                
+                // Disable all checkboxes and actions
+                document.querySelectorAll('.checklist-item').forEach(item => {
+                    item.classList.add('view-only');
+                });
+            }
+        }
+
+        // Update auth UI
+        function updateAuthUI(user) {
+            const authContent = document.getElementById('authContent');
+            
+            if (user) {
+                const statusClass = isEditor ? 'editor' : 'viewer';
+                const statusText = isEditor ? 'עורך' : 'צופה';
+                
+                authContent.innerHTML = `
+                    <img src="${user.photoURL || 'https://ui-avatars.com/api/?name=' + encodeURIComponent(user.displayName || 'User')}" alt="Profile">
+                    <div class="auth-info">
+                        <div class="auth-name">${user.displayName || user.email}</div>
+                        <div class="auth-status ${statusClass}">${statusText}</div>
+                    </div>
+                    <button class="sign-out-btn" onclick="signOut()">יציאה</button>
+                `;
+            } else {
+                authContent.innerHTML = `
+                    <button class="sign-in-btn" onclick="signInWithGoogle()">כניסה עם Google</button>
+                `;
+            }
+        }
 
         // Show sync status
         function showSyncStatus(status, message) {
@@ -793,23 +1040,24 @@
 
         // Initialize app with Firebase
         async function initializeApp() {
-            try {
-                // Sign in anonymously
-                await auth.signInAnonymously();
+            // Listen to authentication state
+            auth.onAuthStateChanged((user) => {
+                currentUser = user;
+                updateAuthUI(user);
                 
-                // Listen to authentication state
-                auth.onAuthStateChanged((user) => {
-                    if (user) {
-                        console.log('Connected to cloud storage');
-                        setupDatabaseListeners();
-                    }
-                });
-            } catch (error) {
-                console.error('Firebase initialization error:', error);
-                showSyncStatus('error', 'בעיה בחיבור לענן');
-                // Fall back to local storage if needed
-                initializeLocalMode();
-            }
+                if (user) {
+                    console.log('User signed in:', user.email);
+                    checkUserPermissions(user);
+                } else {
+                    console.log('No user signed in - anonymous mode');
+                    isEditor = false;
+                    updateUIForPermissions();
+                }
+                
+                if (!isInitialized) {
+                    setupDatabaseListeners();
+                }
+            });
         }
 
         // Setup database listeners
@@ -842,6 +1090,14 @@
                 }
             });
 
+            // Listen for editors list changes
+            database.ref('editors').on('value', (snapshot) => {
+                editors = snapshot.val() || {};
+                if (currentUser) {
+                    checkUserPermissions(currentUser);
+                }
+            });
+
             // Listen for theme preference
             database.ref('preferences/theme').on('value', (snapshot) => {
                 const theme = snapshot.val() || 'light';
@@ -870,18 +1126,8 @@
                 isInitialized = true;
                 document.getElementById('loadingOverlay').classList.add('hidden');
                 showSyncStatus('success', 'מחובר לענן');
+                updateUIForPermissions();
             }, 1000);
-        }
-
-        // Fallback to local mode if Firebase fails
-        function initializeLocalMode() {
-            console.log('Running in local mode');
-            items = defaultItems;
-            renderAllItems();
-            updateStats();
-            document.getElementById('loadingOverlay').classList.add('hidden');
-            showSyncStatus('error', 'מצב לא מקוון');
-            isInitialized = true;
         }
 
         // Render all items
@@ -912,6 +1158,9 @@
         function createItemElement(text, itemId, isChecked, category, index) {
             const div = document.createElement('div');
             div.className = 'checklist-item';
+            if (!isEditor) {
+                div.classList.add('view-only');
+            }
             if (isChecked) {
                 div.classList.add('completed');
             }
@@ -921,7 +1170,12 @@
             checkbox.id = itemId;
             checkbox.checked = isChecked;
             checkbox.addEventListener('change', function() {
-                handleCheckChange(this, itemId);
+                if (isEditor) {
+                    handleCheckChange(this, itemId);
+                } else {
+                    this.checked = !this.checked; // Revert change
+                    alert('התחבר עם חשבון מורשה כדי לערוך');
+                }
             });
 
             const label = document.createElement('label');
@@ -931,28 +1185,38 @@
             const actions = document.createElement('div');
             actions.className = 'item-actions';
 
-            const editBtn = document.createElement('button');
-            editBtn.className = 'edit-btn';
-            editBtn.textContent = 'ערוך';
-            editBtn.onclick = () => editItem(category, index, div);
+            if (isEditor) {
+                const editBtn = document.createElement('button');
+                editBtn.className = 'edit-btn';
+                editBtn.textContent = 'ערוך';
+                editBtn.onclick = () => editItem(category, index, div);
 
-            const deleteBtn = document.createElement('button');
-            deleteBtn.className = 'delete-btn';
-            deleteBtn.textContent = 'מחק';
-            deleteBtn.onclick = () => deleteItem(category, index);
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-btn';
+                deleteBtn.textContent = 'מחק';
+                deleteBtn.onclick = () => deleteItem(category, index);
 
-            actions.appendChild(editBtn);
-            actions.appendChild(deleteBtn);
+                actions.appendChild(editBtn);
+                actions.appendChild(deleteBtn);
+            }
 
             div.appendChild(checkbox);
             div.appendChild(label);
-            div.appendChild(actions);
+            if (isEditor) {
+                div.appendChild(actions);
+            }
 
             return div;
         }
 
         // Handle checkbox change
         function handleCheckChange(checkbox, itemId) {
+            if (!isEditor) {
+                checkbox.checked = !checkbox.checked;
+                alert('התחבר עם חשבון מורשה כדי לערוך');
+                return;
+            }
+
             showSyncStatus('syncing', 'שומר...');
             
             const item = checkbox.closest('.checklist-item');
@@ -971,6 +1235,7 @@
             }).catch((error) => {
                 showSyncStatus('error', 'שגיאה בשמירה');
                 console.error('Save error:', error);
+                checkbox.checked = !checkbox.checked; // Revert on error
             });
             
             updateStats();
@@ -994,6 +1259,11 @@
 
         // Edit item
         function editItem(category, index, itemElement) {
+            if (!isEditor) {
+                alert('התחבר עם חשבון מורשה כדי לערוך');
+                return;
+            }
+
             const label = itemElement.querySelector('label');
             const currentText = label.innerHTML;
             
@@ -1055,6 +1325,11 @@
 
         // Delete item
         function deleteItem(category, index) {
+            if (!isEditor) {
+                alert('התחבר עם חשבון מורשה כדי למחוק');
+                return;
+            }
+
             if (confirm('האם אתה בטוח שברצונך למחוק פריט זה?')) {
                 showSyncStatus('syncing', 'מוחק...');
                 
@@ -1091,6 +1366,11 @@
 
         // Add new item
         function addNewItem() {
+            if (!isEditor) {
+                alert('התחבר עם חשבון מורשה כדי להוסיף פריטים');
+                return;
+            }
+
             const categorySelect = document.getElementById('categorySelect');
             const itemText = document.getElementById('newItemText');
             
@@ -1132,11 +1412,15 @@
         function toggleCategory(header) {
             const category = header.closest('.category');
             category.classList.toggle('collapsed');
-            saveCollapsedState();
+            if (isEditor) {
+                saveCollapsedState();
+            }
         }
 
         // Save collapsed state
         function saveCollapsedState() {
+            if (!isEditor) return;
+            
             const collapsed = [];
             document.querySelectorAll('.category.collapsed').forEach(cat => {
                 const categoryName = cat.dataset.category;
@@ -1155,16 +1439,25 @@
             if (body.classList.contains('dark-mode')) {
                 body.classList.remove('dark-mode');
                 themeToggle.textContent = '🌙';
-                database.ref('preferences/theme').set('light');
+                if (isEditor) {
+                    database.ref('preferences/theme').set('light');
+                }
             } else {
                 body.classList.add('dark-mode');
                 themeToggle.textContent = '☀️';
-                database.ref('preferences/theme').set('dark');
+                if (isEditor) {
+                    database.ref('preferences/theme').set('dark');
+                }
             }
         }
 
         // Reset all data
         function resetAll() {
+            if (!isEditor) {
+                alert('התחבר עם חשבון מורשה כדי לאפס');
+                return;
+            }
+
             if (confirm('האם אתה בטוח שברצונך לאפס את כל הרשימה? פעולה זו תמחק את כל הסימונים והפריטים המותאמים אישית.')) {
                 showSyncStatus('syncing', 'מאפס...');
                 
@@ -1206,7 +1499,7 @@
         // Add enter key listener for new item input
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('newItemText').addEventListener('keypress', function(e) {
-                if (e.key === 'Enter') {
+                if (e.key === 'Enter' && isEditor) {
                     addNewItem();
                 }
             });
