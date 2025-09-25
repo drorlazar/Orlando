@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>רשימת אריזה לטיול אורלנדו</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        
+        :root {
+            --bg-gradient-start: #667eea;
+            --bg-gradient-end: #764ba2;
+            --container-bg: white;
+            --text-color: #333;
+            --header-gradient-start: #ff6b6b;
+            --header-gradient-end: #ee5a52;
+            --category-bg: #f8f9ff;
+            --category-border: #e1e8ff;
+            --category-header-bg: #4c63d2;
+            --stats-bg: #f8f9ff;
+            --add-section-bg: #f0f8f0;
+            --add-section-border: #c8e6c9;
+            --shadow-color: rgba(0,0,0,0.1);
+            --input-bg: white;
+            --completed-bg: #f0f8f0;
+        }
+        
+        body.dark-mode {
+            --bg-gradient-start: #1a1a2e;
+            --bg-gradient-end: #16213e;
+            --container-bg: #0f3460;
+            --text-color: #e8e8e8;
+            --header-gradient-start: #e94560;
+            --header-gradient-end: #c73650;
+            --category-bg: #16213e;
+            --category-border: #1a1a2e;
+            --category-header-bg: #533483;
+            --stats-bg: #16213e;
+            --add-section-bg: #1a2643;
+            --add-section-border: #2d4059;
+            --shadow-color: rgba(0,0,0,0.3);
+            --input-bg: #16213e;
+            --completed-bg: #1a2e1a;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+            min-height: 100vh;
+            padding: 20px;
+            direction: rtl;
+            color: var(--text-color);
+            transition: all 0.3s ease;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: var(--container-bg);
+            border-radius: 15px;
+            box-shadow: 0 20px 40px var(--shadow-color);
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, var(--header-gradient-start), var(--header-gradient-end));
+            color: white;
+            padding: 25px;
+            text-align: center;
+            position: relative;
+        }
+        
+        .theme-toggle {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.2);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 30px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: all 0.3s ease;
+        }
+        
+        .theme-toggle:hover {
+            background: rgba(255,255,255,0.3);
+            transform: scale(1.1);
+        }
+        
+        .reset-btn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(255,100,100,0.3);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 30px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-size: 0.9em;
+            color: white;
+            transition: all 0.3s ease;
+        }
+        
+        .reset-btn:hover {
+            background: rgba(255,100,100,0.5);
+            transform: scale(1.05);
+        }
+        
+        .header h1 {
+            font-size: 1.8em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1em;
+        }
+        
+        .progress {
+            background: rgba(255,255,255,0.2);
+            height: 8px;
+            border-radius: 4px;
+            margin-top: 15px;
+            overflow: hidden;
+        }
+        
+        .progress-bar {
+            background: white;
+            height: 100%;
+            border-radius: 4px;
+            transition: width 0.3s ease;
+            width: 0%;
+        }
+        
+        .content {
+            padding: 25px;
+        }
+        
+        .category {
+            background: var(--category-bg);
+            border-radius: 12px;
+            margin-bottom: 20px;
+            border: 2px solid var(--category-border);
+            transition: all 0.3s ease;
+        }
+        
+        .category-header {
+            background: var(--category-header-bg);
+            color: white;
+            padding: 15px 20px;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-radius: 10px 10px 0 0;
+            transition: background 0.3s ease;
+        }
+        
+        .category-header:hover {
+            background: #3d52c1;
+        }
+        
+        body.dark-mode .category-header:hover {
+            background: #6b4ca3;
+        }
+        
+        .category-header h3 {
+            font-size: 1.2em;
+        }
+        
+        .toggle-icon {
+            transition: transform 0.3s ease;
+            font-size: 1.2em;
+        }
+        
+        .category.collapsed .toggle-icon {
+            transform: rotate(-90deg);
+        }
+        
+        .category-content {
+            padding: 20px;
+            transition: all 0.3s ease;
+            max-height: 2000px;
+            overflow: hidden;
+        }
+        
+        .category.collapsed .category-content {
+            max-height: 0;
+            padding: 0 20px;
+        }
+        
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--category-border);
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .checklist-item:last-child {
+            border-bottom: none;
+        }
+        
+        .checklist-item.completed {
+            opacity: 0.6;
+            background: var(--completed-bg);
+            text-decoration: line-through;
+            border-radius: 6px;
+            margin: 2px 0;
+            padding: 12px 10px;
+        }
+        
+        .checklist-item input[type="checkbox"] {
+            width: 20px;
+            height: 20px;
+            margin-left: 15px;
+            accent-color: #4c63d2;
+            cursor: pointer;
+        }
+        
+        .checklist-item label {
+            flex: 1;
+            cursor: pointer;
+            font-size: 1.05em;
+            line-height: 1.4;
+        }
+        
+        .item-actions {
+            display: flex;
+            gap: 8px;
+            opacity: 0;
+            transition: all 0.3s ease;
+        }
+        
+        .checklist-item:hover .item-actions {
+            opacity: 1;
+        }
+        
+        .edit-btn, .delete-btn, .save-btn, .cancel-btn {
+            border: none;
+            padding: 6px 10px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.8em;
+            transition: all 0.3s ease;
+            color: white;
+        }
+        
+        .edit-btn {
+            background: #4c63d2;
+        }
+        
+        .edit-btn:hover {
+            background: #3d52c1;
+            transform: scale(1.05);
+        }
+        
+        .delete-btn {
+            background: #ff4757;
+        }
+        
+        .delete-btn:hover {
+            background: #ff3742;
+            transform: scale(1.05);
+        }
+        
+        .save-btn {
+            background: #4caf50;
+        }
+        
+        .save-btn:hover {
+            background: #45a049;
+        }
+        
+        .cancel-btn {
+            background: #666;
+        }
+        
+        .cancel-btn:hover {
+            background: #555;
+        }
+        
+        .edit-input {
+            flex: 1;
+            padding: 8px;
+            border: 2px solid #4c63d2;
+            border-radius: 6px;
+            font-size: 1em;
+            background: var(--input-bg);
+            color: var(--text-color);
+        }
+        
+        .stats {
+            background: var(--stats-bg);
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+            border: 2px solid var(--category-border);
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+        }
+        
+        .stat-item {
+            background: var(--container-bg);
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px var(--shadow-color);
+        }
+        
+        .stat-number {
+            font-size: 1.8em;
+            font-weight: bold;
+            color: #4c63d2;
+        }
+        
+        body.dark-mode .stat-number {
+            color: #8b9aff;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #666;
+            margin-top: 5px;
+        }
+        
+        body.dark-mode .stat-label {
+            color: #aaa;
+        }
+        
+        .person-tag {
+            display: inline-block;
+            background: #4c63d2;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            margin-right: 8px;
+        }
+        
+        .add-item-section {
+            background: var(--add-section-bg);
+            border-radius: 12px;
+            padding: 20px;
+            margin-top: 20px;
+            border: 2px solid var(--add-section-border);
+        }
+        
+        .add-item-section h3 {
+            color: #2e7d32;
+            margin-bottom: 15px;
+            font-size: 1.2em;
+        }
+        
+        body.dark-mode .add-item-section h3 {
+            color: #66bb6a;
+        }
+        
+        .add-item-form {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .add-item-form select,
+        .add-item-form input {
+            flex: 1;
+            min-width: 150px;
+            padding: 10px;
+            border: 2px solid var(--add-section-border);
+            border-radius: 8px;
+            font-size: 1em;
+            background: var(--input-bg);
+            color: var(--text-color);
+        }
+        
+        .add-item-form select:focus,
+        .add-item-form input:focus {
+            outline: none;
+            border-color: #4c63d2;
+            box-shadow: 0 0 5px rgba(76, 99, 210, 0.3);
+        }
+        
+        .add-item-form button {
+            background: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: bold;
+            transition: all 0.3s ease;
+        }
+        
+        .add-item-form button:hover {
+            background: #45a049;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(76, 175, 80, 0.3);
+        }
+        
+        .add-item-form button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+        
+        .footer {
+            text-align: center;
+            padding: 20px;
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        body.dark-mode .footer {
+            color: #999;
+        }
+        
+        @media (max-width: 600px) {
+            body {
+                padding: 10px;
+            }
+            
+            .header {
+                padding: 20px;
+            }
+            
+            .header h1 {
+                font-size: 1.5em;
+            }
+            
+            .theme-toggle {
+                top: 10px;
+                left: 10px;
+                padding: 6px 10px;
+                font-size: 1em;
+            }
+            
+            .reset-btn {
+                top: 10px;
+                right: 10px;
+                font-size: 0.8em;
+                padding: 6px 10px;
+            }
+            
+            .content {
+                padding: 15px;
+            }
+            
+            .stats-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+            
+            .add-item-form {
+                flex-direction: column;
+            }
+            
+            .add-item-form select,
+            .add-item-form input,
+            .add-item-form button {
+                width: 100%;
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <button class="theme-toggle" onclick="toggleTheme()" id="themeToggle">🌙</button>
+            <button class="reset-btn" onclick="resetAll()">🔄 אפס הכל</button>
+            <h1>🏰 רשימת אריזה לטיול אורלנדו</h1>
+            <p>משפחה של 5 • שבועיים • פארקי דיסני ויוניברסל</p>
+            <div class="progress">
+                <div class="progress-bar" id="progressBar"></div>
+            </div>
+        </div>
+        
+        <div class="content">
+            <div class="stats">
+                <div class="stats-grid">
+                    <div class="stat-item">
+                        <div class="stat-number" id="totalItems">0</div>
+                        <div class="stat-label">סה"כ פריטים</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="completedItems">0</div>
+                        <div class="stat-label">נארז</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="remainingItems">0</div>
+                        <div class="stat-label">נשאר</div>
+                    </div>
+                    <div class="stat-item">
+                        <div class="stat-number" id="completionPercentage">0%</div>
+                        <div class="stat-label">הושלם</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- קטגוריות -->
+            <div class="category" data-category="medical">
+                <div class="category-header" onclick="toggleCategory(this)">
+                    <h3>💊 תרופות וציוד רפואי</h3>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="category-content" id="medical-content"></div>
+            </div>
+
+            <div class="category" data-category="electronics">
+                <div class="category-header" onclick="toggleCategory(this)">
+                    <h3>📱 ציוד אלקטרוניקה ומולטימדיה</h3>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="category-content" id="electronics-content"></div>
+            </div>
+
+            <div class="category" data-category="parks">
+                <div class="category-header" onclick="toggleCategory(this)">
+                    <h3>🎢 ציוד פארקים ופעילויות</h3>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="category-content" id="parks-content"></div>
+            </div>
+
+            <div class="category" data-category="parents">
+                <div class="category-header" onclick="toggleCategory(this)">
+                    <h3>👔 בגדים - הורים</h3>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="category-content" id="parents-content"></div>
+            </div>
+
+            <div class="category" data-category="teen">
+                <div class="category-header" onclick="toggleCategory(this)">
+                    <h3>🎧 בן/בת 17</h3>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="category-content" id="teen-content"></div>
+            </div>
+
+            <div class="category" data-category="kid13">
+                <div class="category-header" onclick="toggleCategory(this)">
+                    <h3>🎮 בן/בת 13</h3>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="category-content" id="kid13-content"></div>
+            </div>
+
+            <div class="category" data-category="kid8">
+                <div class="category-header" onclick="toggleCategory(this)">
+                    <h3>🧸 בן/בת 8</h3>
+                    <span class="toggle-icon">▼</span>
+                </div>
+                <div class="category-content" id="kid8-content"></div>
+            </div>
+
+            <!-- Add New Item Section -->
+            <div class="add-item-section">
+                <h3>➕ הוסף פריט חדש</h3>
+                <div class="add-item-form">
+                    <select id="categorySelect">
+                        <option value="">בחר קטגוריה...</option>
+                        <option value="medical">💊 תרופות וציוד רפואי</option>
+                        <option value="electronics">📱 ציוד אלקטרוניקה ומולטימדיה</option>
+                        <option value="parks">🎢 ציוד פארקים ופעילויות</option>
+                        <option value="parents">👔 בגדים - הורים</option>
+                        <option value="teen">🎧 בן/בת 17</option>
+                        <option value="kid13">🎮 בן/בת 13</option>
+                        <option value="kid8">🧸 בן/בת 8</option>
+                    </select>
+                    <input type="text" id="newItemText" placeholder="הכנס תיאור הפריט..." maxlength="100">
+                    <button id="addItemBtn" onclick="addNewItem()">הוסף</button>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            💾 כל הנתונים נשמרים אוטומטית במכשיר שלך
+        </div>
+    </div>
+
+    <script>
+        // Data structure for the packing list
+        const defaultItems = {
+            medical: [
+                'תרופות קבועות לכל בני המשפחה (כמות ל-3 שבועות + רזרבה)',
+                'מרשמים רפואיים מקוריים',
+                'פלסטרים ותחבושות',
+                'משכך כאבים (פרצטמול, אדוויל)',
+                'תרופות לקלקול קיבה',
+                'קרם הגנה SPF 50+ (מספר יחידות)',
+                'קרם לאחר שיזוף/אלווורה'
+            ],
+            electronics: [
+                'מטענים לכל המכשירים',
+                'מטען נייד (Power Bank) גדול',
+                'כבל מתאם חשמל אמריקאי',
+                'מפצל חשמל (Power Strip)',
+                'אוזניות לכל אחד',
+                'כבלים נוספים (USB-C, Lightning)',
+                'נרתיק עמיד למים לטלפונים'
+            ],
+            parks: [
+                'תיקי גב קטנים לפארקים',
+                'בקבוקי מים לשימוש חוזר (5 יח\')',
+                'מאווררים ידניים/חשמליים קטנים',
+                'כובעים וכובעי מצחייה',
+                'משקפי שמש לכולם',
+                'טישו ומטליות לחות'
+            ],
+            parents: [
+                '<span class="person-tag">הורה 1</span>חולצות טי שירט (8-10 יח\')',
+                '<span class="person-tag">הורה 1</span>מכנסיים קצרים (6-7 יח\')',
+                '<span class="person-tag">הורה 1</span>בגדי ים (2-3 יח\')',
+                '<span class="person-tag">הורה 1</span>נעליים נוחות להליכה (2 זוגות)',
+                '<span class="person-tag">הורה 2</span>חולצות טי שירט (8-10 יח\')',
+                '<span class="person-tag">הורה 2</span>מכנסיים קצרים (6-7 יח\')',
+                '<span class="person-tag">הורה 2</span>בגדי ים (2-3 יח\')',
+                '<span class="person-tag">הורה 2</span>נעליים נוחות להליכה (2 זוגות)'
+            ],
+            teen: [
+                'חולצות טי שירט (8-9 יח\')',
+                'מכנסיים קצרים (6 יח\')',
+                'בגדי ים (2-3 יח\')',
+                'נעליים נוחות + סניקרס',
+                'טלפון + מטען + אוזניות',
+                'מצלמה אישית/GoPro'
+            ],
+            kid13: [
+                'חולצות טי שירט (7-8 יח\')',
+                'מכנסיים קצרים (5-6 יח\')',
+                'בגדי ים (2 יח\')',
+                'נעליים נוחות + כפכפים',
+                'טלפון + מטען + אוזניות',
+                'קונסולת Nintendo Switch + משחקים'
+            ],
+            kid8: [
+                'חולצות טי שירט (6-7 יח\')',
+                'מכנסיים קצרים (5 יח\')',
+                'בגדי ים (2 יח\')',
+                'פיג\'מות (3-4 יח\')',
+                'טאבלט + מגן + אוזניות לילדים',
+                'צעצועים קטנים + ספרי צביעה',
+                'רכב צעצוע/בובה אהובה'
+            ]
+        };
+
+        // Storage management
+        class StorageManager {
+            static getItems() {
+                const stored = localStorage.getItem('packingListItems');
+                return stored ? JSON.parse(stored) : defaultItems;
+            }
+
+            static saveItems(items) {
+                localStorage.setItem('packingListItems', JSON.stringify(items));
+            }
+
+            static getCheckedItems() {
+                const stored = localStorage.getItem('checkedItems');
+                return stored ? JSON.parse(stored) : {};
+            }
+
+            static saveCheckedItems(checkedItems) {
+                localStorage.setItem('checkedItems', JSON.stringify(checkedItems));
+            }
+
+            static getTheme() {
+                return localStorage.getItem('theme') || 'light';
+            }
+
+            static saveTheme(theme) {
+                localStorage.setItem('theme', theme);
+            }
+
+            static getCollapsedCategories() {
+                const stored = localStorage.getItem('collapsedCategories');
+                return stored ? JSON.parse(stored) : [];
+            }
+
+            static saveCollapsedCategories(collapsed) {
+                localStorage.setItem('collapsedCategories', JSON.stringify(collapsed));
+            }
+
+            static resetAll() {
+                localStorage.removeItem('packingListItems');
+                localStorage.removeItem('checkedItems');
+                localStorage.removeItem('collapsedCategories');
+                // Note: keeping theme preference
+            }
+        }
+
+        // Initialize the app
+        let items = StorageManager.getItems();
+        let checkedItems = StorageManager.getCheckedItems();
+        let itemIdCounter = 0;
+
+        function initializeApp() {
+            // Apply saved theme
+            const savedTheme = StorageManager.getTheme();
+            if (savedTheme === 'dark') {
+                document.body.classList.add('dark-mode');
+                document.getElementById('themeToggle').textContent = '☀️';
+            }
+
+            // Render all items
+            renderAllItems();
+
+            // Apply saved collapsed states
+            const collapsedCategories = StorageManager.getCollapsedCategories();
+            collapsedCategories.forEach(categoryName => {
+                const category = document.querySelector(`[data-category="${categoryName}"]`);
+                if (category) {
+                    category.classList.add('collapsed');
+                }
+            });
+
+            // Add event listener for Enter key in input field
+            document.getElementById('newItemText').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    addNewItem();
+                }
+            });
+
+            // Update stats
+            updateStats();
+        }
+
+        function renderAllItems() {
+            Object.keys(items).forEach(category => {
+                renderCategoryItems(category);
+            });
+        }
+
+        function renderCategoryItems(category) {
+            const container = document.getElementById(`${category}-content`);
+            if (!container) return;
+
+            container.innerHTML = '';
+            
+            items[category].forEach((itemText, index) => {
+                const itemId = `${category}-${index}`;
+                const isChecked = checkedItems[itemId] || false;
+                const itemElement = createItemElement(itemText, itemId, isChecked, category, index);
+                container.appendChild(itemElement);
+            });
+        }
+
+        function createItemElement(text, itemId, isChecked, category, index) {
+            const div = document.createElement('div');
+            div.className = 'checklist-item';
+            if (isChecked) {
+                div.classList.add('completed');
+            }
+
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.id = itemId;
+            checkbox.checked = isChecked;
+            checkbox.addEventListener('change', function() {
+                handleCheckChange(this, itemId);
+            });
+
+            const label = document.createElement('label');
+            label.htmlFor = itemId;
+            label.innerHTML = text;
+
+            const actions = document.createElement('div');
+            actions.className = 'item-actions';
+
+            const editBtn = document.createElement('button');
+            editBtn.className = 'edit-btn';
+            editBtn.textContent = 'ערוך';
+            editBtn.onclick = () => editItem(category, index, div);
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'delete-btn';
+            deleteBtn.textContent = 'מחק';
+            deleteBtn.onclick = () => deleteItem(category, index);
+
+            actions.appendChild(editBtn);
+            actions.appendChild(deleteBtn);
+
+            div.appendChild(checkbox);
+            div.appendChild(label);
+            div.appendChild(actions);
+
+            return div;
+        }
+
+        function handleCheckChange(checkbox, itemId) {
+            const item = checkbox.closest('.checklist-item');
+            if (checkbox.checked) {
+                item.classList.add('completed');
+                checkedItems[itemId] = true;
+            } else {
+                item.classList.remove('completed');
+                delete checkedItems[itemId];
+            }
+            StorageManager.saveCheckedItems(checkedItems);
+            updateStats();
+        }
+
+        function editItem(category, index, itemElement) {
+            const label = itemElement.querySelector('label');
+            const currentText = label.innerHTML;
+            
+            // Remove person tags for editing
+            const textWithoutTags = currentText.replace(/<span class="person-tag">.*?<\/span>/g, '');
+            
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'edit-input';
+            input.value = textWithoutTags;
+
+            const saveBtn = document.createElement('button');
+            saveBtn.className = 'save-btn';
+            saveBtn.textContent = 'שמור';
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'cancel-btn';
+            cancelBtn.textContent = 'בטל';
+
+            const actions = itemElement.querySelector('.item-actions');
+            actions.style.opacity = '1';
+            actions.innerHTML = '';
+            actions.appendChild(saveBtn);
+            actions.appendChild(cancelBtn);
+
+            label.style.display = 'none';
+            itemElement.insertBefore(input, actions);
+            input.focus();
+            input.select();
+
+            const saveEdit = () => {
+                const newText = input.value.trim();
+                if (newText) {
+                    items[category][index] = newText;
+                    StorageManager.saveItems(items);
+                    renderCategoryItems(category);
+                    updateStats();
+                }
+            };
+
+            const cancelEdit = () => {
+                renderCategoryItems(category);
+                updateStats();
+            };
+
+            saveBtn.onclick = saveEdit;
+            cancelBtn.onclick = cancelEdit;
+            
+            input.addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') {
+                    saveEdit();
+                } else if (e.key === 'Escape') {
+                    cancelEdit();
+                }
+            });
+        }
+
+        function deleteItem(category, index) {
+            if (confirm('האם אתה בטוח שברצונך למחוק פריט זה?')) {
+                // Remove from items array
+                items[category].splice(index, 1);
+                
+                // Update checked items (reindex)
+                const newCheckedItems = {};
+                Object.keys(checkedItems).forEach(key => {
+                    const [cat, idx] = key.split('-');
+                    if (cat === category) {
+                        const numIdx = parseInt(idx);
+                        if (numIdx < index) {
+                            newCheckedItems[key] = checkedItems[key];
+                        } else if (numIdx > index) {
+                            newCheckedItems[`${cat}-${numIdx - 1}`] = checkedItems[key];
+                        }
+                    } else {
+                        newCheckedItems[key] = checkedItems[key];
+                    }
+                });
+                
+                checkedItems = newCheckedItems;
+                StorageManager.saveItems(items);
+                StorageManager.saveCheckedItems(checkedItems);
+                renderCategoryItems(category);
+                updateStats();
+            }
+        }
+
+        function addNewItem() {
+            const categorySelect = document.getElementById('categorySelect');
+            const itemText = document.getElementById('newItemText');
+            
+            if (!categorySelect.value || !itemText.value.trim()) {
+                alert('אנא בחר קטגוריה והכנס תיאור לפריט');
+                return;
+            }
+            
+            const category = categorySelect.value;
+            const text = itemText.value.trim();
+            
+            // Add to items array
+            if (!items[category]) {
+                items[category] = [];
+            }
+            items[category].push(text);
+            
+            // Save and render
+            StorageManager.saveItems(items);
+            renderCategoryItems(category);
+            
+            // Clear form
+            categorySelect.value = '';
+            itemText.value = '';
+            
+            // Update stats
+            updateStats();
+            
+            // Expand category if collapsed
+            const categoryElement = document.querySelector(`[data-category="${category}"]`);
+            if (categoryElement && categoryElement.classList.contains('collapsed')) {
+                categoryElement.classList.remove('collapsed');
+                saveCollapsedState();
+            }
+        }
+
+        function toggleCategory(header) {
+            const category = header.closest('.category');
+            category.classList.toggle('collapsed');
+            saveCollapsedState();
+        }
+
+        function saveCollapsedState() {
+            const collapsed = [];
+            document.querySelectorAll('.category.collapsed').forEach(cat => {
+                const categoryName = cat.dataset.category;
+                if (categoryName) {
+                    collapsed.push(categoryName);
+                }
+            });
+            StorageManager.saveCollapsedCategories(collapsed);
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const themeToggle = document.getElementById('themeToggle');
+            
+            if (body.classList.contains('dark-mode')) {
+                body.classList.remove('dark-mode');
+                themeToggle.textContent = '🌙';
+                StorageManager.saveTheme('light');
+            } else {
+                body.classList.add('dark-mode');
+                themeToggle.textContent = '☀️';
+                StorageManager.saveTheme('dark');
+            }
+        }
+
+        function resetAll() {
+            if (confirm('האם אתה בטוח שברצונך לאפס את כל הרשימה? פעולה זו תמחק את כל הסימונים והפריטים המותאמים אישית.')) {
+                StorageManager.resetAll();
+                // Reload the page to reset everything
+                location.reload();
+            }
+        }
+
+        function updateStats() {
+            const allCheckboxes = document.querySelectorAll('.checklist-item input[type="checkbox"]');
+            const checkedCheckboxes = document.querySelectorAll('.checklist-item input[type="checkbox"]:checked');
+            
+            const total = allCheckboxes.length;
+            const completed = checkedCheckboxes.length;
+            const remaining = total - completed;
+            const percentage = total > 0 ? Math.round((completed / total) * 100) : 0;
+
+            document.getElementById('totalItems').textContent = total;
+            document.getElementById('completedItems').textContent = completed;
+            document.getElementById('remainingItems').textContent = remaining;
+            document.getElementById('completionPercentage').textContent = percentage + '%';
+            
+            // Update progress bar
+            document.getElementById('progressBar').style.width = percentage + '%';
+        }
+
+        // Initialize app when DOM is loaded
+        document.addEventListener('DOMContentLoaded', initializeApp);
+    </script>
+</body>
+</html>
